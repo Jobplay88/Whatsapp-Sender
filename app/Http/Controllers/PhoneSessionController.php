@@ -13,7 +13,7 @@ class PhoneSessionController extends ApiController
     {
         $phoneSessions = WhatsappService::where('status', 'active')->get();
 
-        return $this->response('success', '', $phoneSessions);
+        return $this->response('success', $phoneSessions);
     }
     public function handleAddNewPhoneSession(Request $request)
     {
