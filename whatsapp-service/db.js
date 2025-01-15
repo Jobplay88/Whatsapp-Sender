@@ -1,10 +1,11 @@
+require('dotenv').config();
 const mysql = require('mysql2');
 
 const db = mysql.createPool({
-    host: 'localhost', // Replace with your DB host
-    user: 'root',      // Replace with your DB user
-    password: '', // Replace with your DB password
-    database: 'whatsapp', // Replace with your DB name
+    host: process.env.HOST, // Replace with your DB host
+    user: process.env.USER,      // Replace with your DB user
+    password: process.env.PASSWORD, // Replace with your DB password
+    database: process.env.DATABASE, // Replace with your DB name
     connectionLimit: 10 // Optional for connection pooling
 });
 
