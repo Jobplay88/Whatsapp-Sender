@@ -22,9 +22,9 @@ use Laravel\Passport\Http\Controllers\AuthorizedAccessTokenController;
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     return $request->user();
 // });
-Route::post('/oauth/token', [AccessTokenController::class, 'issueToken'])->name('passport.token');
-Route::post('/oauth/token/refresh', [TransientTokenController::class, 'refreshToken'])->name('passport.refresh');
-Route::delete('/oauth/token/revoke', [AuthorizedAccessTokenController::class, 'destroy'])->name('passport.revoke');
+Route::post('/oauth/token', [AccessTokenController::class, 'issueToken']);
+Route::post('/oauth/token/refresh', [TransientTokenController::class, 'refreshToken']);
+Route::delete('/oauth/token/revoke', [AuthorizedAccessTokenController::class, 'destroy']);
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
