@@ -21,7 +21,7 @@ app.use(cors({
 app.use(bodyParser.json());
 
 // Whitelisted IPs
-const ipWhitelist = ['127.0.0.1', '::1'];
+const ipWhitelist = ['127.0.0.1', '::1', '3.25.64.120', '202.187.226.147'];
 app.use(ipWhitelistMiddleware);
 
 // Create HTTP server and integrate Socket.IO
@@ -191,6 +191,12 @@ fetchPhoneSessions().then((phoneSessions) => {
     // console.log(phoneSessions);
     phoneSessions.forEach(initializeSession);
 });
+
+// TESTING PURPPOSE
+app.get('/', (req, res) => {
+    res.send('Hello, World!');
+});
+
 
 // API endpoint to send messages
 app.post('/send-message', async (req, res) => {
