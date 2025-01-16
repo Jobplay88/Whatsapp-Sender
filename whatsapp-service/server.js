@@ -197,7 +197,6 @@ app.get('/', (req, res) => {
     res.send('Hello, World!');
 });
 
-
 // API endpoint to send messages
 app.post('/send-message', async (req, res) => {
     let { chatId, message } = req.body;
