@@ -21,7 +21,28 @@ app.use(cors({
 app.use(bodyParser.json());
 
 // Whitelisted IPs
-const ipWhitelist = ['127.0.0.1', '::1', '3.25.64.120', '202.187.226.147'];
+async function getWhitelistedIPs() {
+    try {
+        const [rows] = await db.query('SELECT ip_address FROM ip_whitelists');
+        return rows.map(row => row.ip_address); // Extract IP addresses from the result
+    } catch (error) {
+        console.error('Error fetching whitelisted IPs:', error);
+        return [];
+    }
+}
+
+async function ipWhitelistMiddleware(req, res, next) {
+    const ipWhitelist = await getWhitelistedIPs(); // Dynamically fetch IPs from the database
+    const clientIp = req.ip.replace('::ffff:', ''); // Handle IPv4-mapped IPv6 addresses
+
+    if (ipWhitelist.includes(clientIp)) {
+        next(); // Allow access
+    } else {
+        console.warn(`[IP Blocked] Unauthorized access attempt from IP: ${clientIp}`);
+        res.status(403).json({ error: 'Access denied: Your IP is not whitelisted.' });
+    }
+}
+
 app.use(ipWhitelistMiddleware);
 
 // Create HTTP server and integrate Socket.IO
@@ -248,18 +269,6 @@ function isClientReady(client) {
 function formatPhoneNumber(phoneNumber) {
     const cleanNumber = phoneNumber.replace(/[^0-9]/g, '');
     return cleanNumber.endsWith('@c.us') ? cleanNumber : `${cleanNumber}@c.us`;
-}
-
-// Middleware to check IP whitelist
-function ipWhitelistMiddleware(req, res, next) {
-    const clientIp = req.ip.replace('::ffff:', ''); // Handle IPv4-mapped IPv6 addresses
-
-    if (ipWhitelist.includes(clientIp)) {
-        next(); // Allow access
-    } else {
-        warnWithTimestamp(`[IP Blocked] Unauthorized access attempt from IP: ${clientIp}`);
-        res.status(403).json({ error: 'Access denied: Your IP is not whitelisted.' });
-    }
 }
 
 // Handle all uncaught exceptions globally

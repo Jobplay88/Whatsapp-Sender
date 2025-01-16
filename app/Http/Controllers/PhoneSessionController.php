@@ -9,9 +9,11 @@ use Illuminate\Support\Facades\Validator;
 
 class PhoneSessionController extends ApiController
 {
-    public function showPhoneSessionList()
+    public function showPhoneSessionList(Request $request)
     {
-        $phoneSessions = WhatsappService::where('status', 'active')->get();
+        $limit = $request->limit ?? $this->pagination_limit();
+
+        $phoneSessions = WhatsappService::where('status', 'active')->paginate($limit);
 
         return $this->response('success', $phoneSessions);
     }
@@ -42,7 +44,7 @@ class PhoneSessionController extends ApiController
         }
         catch (\Exception $e) {
             $this->rollback();
-            return $this->response('error', $e->getMessage());
+            return $this->response('serverError', $e->getMessage());
         }
     }
 
@@ -53,7 +55,7 @@ class PhoneSessionController extends ApiController
         ]);
 
         if ($validator->fails()) {
-            return $this->response('error', $validator->errors());
+            return $this->response('validationError', ['errors' => $validator->errors()]);
         }
 
         try {
@@ -68,7 +70,7 @@ class PhoneSessionController extends ApiController
         }
         catch (\Exception $e) {
             $this->rollback();
-            return $this->response('error', $e->getMessage());
+            return $this->response('serverError', $e->getMessage());
         }
     }
 }

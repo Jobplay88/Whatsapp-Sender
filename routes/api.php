@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\WhiteListController;
 use App\Http\Controllers\PhoneSessionController;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
 use Laravel\Passport\Http\Controllers\TransientTokenController;
@@ -34,5 +35,11 @@ Route::middleware(['auth:api'])->group(function () {
         Route::get('/list', [PhoneSessionController::class, 'showPhoneSessionList']);
         Route::post('/create', [PhoneSessionController::class, 'handleAddNewPhoneSession']);
         Route::post('/delete', [PhoneSessionController::class, 'handleDeletePhoneSession']);
+    });
+
+    Route::group(['prefix' => 'whitelist'], function () {
+        Route::get('/list', [WhiteListController::class, 'showWhiteLists']);
+        Route::post('/create', [WhiteListController::class, 'handleAddNewWhiteList']);
+        Route::post('/delete', [WhiteListController::class, 'handleDeleteWhiteList']);
     });
 });
