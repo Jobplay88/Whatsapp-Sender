@@ -67,6 +67,7 @@ async function fetchPhoneSessions() {
 }
 
 async function checkForNewSessions() {
+    logWithTimestamp("Checking for new sessions...");
     const phoneSessions = await fetchPhoneSessions();
     const currentSessionNames = phoneSessions.map(session => session.name);
 
