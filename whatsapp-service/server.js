@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const fs = require('fs-extra');
 const path = require('path');
@@ -221,7 +221,7 @@ app.get('/', (req, res) => {
 
 // API endpoint to send messages
 app.post('/send-message', async (req, res) => {
-    let { chatId, message } = req.body;
+    let { chatId, message, imageUrl, base64Image, filePath } = req.body;
 
     if (!chatId || !message) {
         return res.status(400).json({ error: 'chatId and message are required.' });
@@ -239,8 +239,31 @@ app.post('/send-message', async (req, res) => {
         if (client.info) {
             try {
                 if (isClientReady(client)) {
-                    await client.sendMessage(chatId, message);
-                    logWithTimestamp(`Message sent from session ${clientObj.name} to ${chatId}`);
+                    let media = null;
+
+                    if (imageUrl) {
+                        // Send Image from URL
+                        media = await MessageMedia.fromUrl(imageUrl);
+                    } else if (base64Image) {
+                        // Send Base64 Image
+                        const mimeType = base64Image.substring(
+                            base64Image.indexOf(':') + 1, 
+                            base64Image.indexOf(';')
+                        ); // Extract MIME type
+                        media = new MessageMedia(mimeType, base64Image.split(',')[1]);
+                    } else if (filePath) {
+                        // Send Local Image
+                        media = MessageMedia.fromFilePath(filePath);
+                    }
+
+                    if (media) {
+                        await client.sendMessage(chatId, media, { caption: message || '' });
+                        logWithTimestamp(`Image sent from session ${clientObj.name} to ${chatId}`);
+                    } else {
+                        await client.sendMessage(chatId, message);
+                        logWithTimestamp(`Message sent from session ${clientObj.name} to ${chatId}`);
+                    }
+
                     res.json({ success: true, from: clientObj.name });
                     messageSent = true;
                     break;
