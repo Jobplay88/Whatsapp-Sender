@@ -109,13 +109,25 @@ async function checkForNewSessions() {
 }
 
 const logWithTimestamp = (msg) => {
-    console.log(`[${new Date().toISOString()}] ${msg}`);
+    const logMessage = `\n[${new Date().toISOString()}] ${msg}\n`;
+    console.log(logMessage);
 };
 const errorWithTimestamp = (msg) => {
-    console.error(`[${new Date().toISOString()}] ${msg}`);
+    const logDir = path.join(__dirname, 'logs');
+    const logFile = path.join(logDir, 'error.log');
+
+    // Create the logs folder if it doesn't exist
+    if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir);
+    }
+
+    const logMessage = `\n[${new Date().toISOString()}] ${msg}\n`;
+    fs.appendFileSync(logFile, logMessage);
+    console.error(logMessage);
 };
 const warnWithTimestamp = (msg) => {
-    console.warn(`[${new Date().toISOString()}] ${msg}`);
+    const logMessage = `\n[${new Date().toISOString()}] ${msg}\n`;
+    console.warn(logMessage);
 };
 
 // Store WhatsApp clients
