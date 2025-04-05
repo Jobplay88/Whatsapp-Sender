@@ -221,53 +221,71 @@ app.get('/', (req, res) => {
 
 // API endpoint to send messages
 app.post('/send-message', async (req, res) => {
-    let { chatId, message, imageUrl, base64Image, filePath } = req.body;
+    const { chatId, message, imageUrl, base64Image, filePath } = req.body;
 
     if (!chatId || !message) {
         return res.status(400).json({ error: 'chatId and message are required.' });
     }
 
-    chatId = formatPhoneNumber(chatId);
+    const result = await sendMessageWithClient(chatId, message, { imageUrl, base64Image, filePath });
 
+    if (result.success) {
+        res.json(result);
+    } else {
+        res.status(500).json(result);
+    }
+});
+
+app.post('/send-bulk-message', async (req, res) => {
+    const { chatIds, message, imageUrl, base64Image, filePath } = req.body;
+
+    if (!Array.isArray(chatIds) || chatIds.length === 0 || !message) {
+        return res.status(400).json({ error: 'chatIds (array) and message are required.' });
+    }
+
+    const results = [];
+
+    for (const chatId of chatIds) {
+        const result = await sendMessageWithClient(chatId, message, { imageUrl, base64Image, filePath });
+        results.push({ chatId, ...result });
+    }
+
+    res.json({ results });
+});
+
+async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
+    chatId = formatPhoneNumber(chatId);
     let attempts = 0;
-    let messageSent = false;
 
     while (attempts < clients.length) {
         const clientObj = clients[currentClientIndex];
         const client = clientObj.client;
 
-        if (client.info) {
+        if (client.info && isClientReady(client)) {
             try {
-                if (isClientReady(client)) {
-                    let media = null;
+                let media = null;
 
-                    if (imageUrl) {
-                        // Send Image from URL
-                        media = await MessageMedia.fromUrl(imageUrl);
-                    } else if (base64Image) {
-                        // Send Base64 Image
-                        const mimeType = base64Image.substring(
-                            base64Image.indexOf(':') + 1, 
-                            base64Image.indexOf(';')
-                        ); // Extract MIME type
-                        media = new MessageMedia(mimeType, base64Image.split(',')[1]);
-                    } else if (filePath) {
-                        // Send Local Image
-                        media = MessageMedia.fromFilePath(filePath);
-                    }
-
-                    if (media) {
-                        await client.sendMessage(chatId, media, { caption: message || '' });
-                        logWithTimestamp(`Image sent from session ${clientObj.name} to ${chatId}`);
-                    } else {
-                        await client.sendMessage(chatId, message);
-                        logWithTimestamp(`Message sent from session ${clientObj.name} to ${chatId}`);
-                    }
-
-                    res.json({ success: true, from: clientObj.name });
-                    messageSent = true;
-                    break;
+                if (mediaOptions.imageUrl) {
+                    media = await MessageMedia.fromUrl(mediaOptions.imageUrl);
+                } else if (mediaOptions.base64Image) {
+                    const mimeType = mediaOptions.base64Image.substring(
+                        mediaOptions.base64Image.indexOf(':') + 1,
+                        mediaOptions.base64Image.indexOf(';')
+                    );
+                    media = new MessageMedia(mimeType, mediaOptions.base64Image.split(',')[1]);
+                } else if (mediaOptions.filePath) {
+                    media = MessageMedia.fromFilePath(mediaOptions.filePath);
                 }
+
+                if (media) {
+                    await client.sendMessage(chatId, media, { caption: message || '' });
+                    logWithTimestamp(`Image sent from session ${clientObj.name} to ${chatId}`);
+                } else {
+                    await client.sendMessage(chatId, message);
+                    logWithTimestamp(`Message sent from session ${clientObj.name} to ${chatId}`);
+                }
+
+                return { success: true, from: clientObj.name };
             } catch (err) {
                 errorWithTimestamp(`[${clientObj.name}] Failed to send message: ${err.message}`);
             }
@@ -279,10 +297,9 @@ app.post('/send-message', async (req, res) => {
         attempts++;
     }
 
-    if (!messageSent) {
-        res.status(500).json({ error: 'No connected sessions available to send the message.' });
-    }
-});
+    return { success: false, error: 'No connected sessions available to send the message.' };
+}
+
 
 // Utility function to check if a client is ready
 function isClientReady(client) {

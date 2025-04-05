@@ -19,6 +19,7 @@ class PhoneSessionController extends ApiController
     }
     public function handleAddNewPhoneSession(Request $request)
     {
+        dd($request->all());
         $validator = Validator::make($request->all(), [
             'name' => 'required',
             'number' => 'required',
