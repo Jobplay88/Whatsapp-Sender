@@ -8,9 +8,12 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const multer = require('multer');
+const csv = require('csv-parser');
 
 const app = express();
 const db = require('./db');
+const upload = multer({ dest: 'uploads/' });
 
 // Enable CORS for API requests (Express)
 app.use(cors({
@@ -248,22 +251,68 @@ app.post('/send-message', async (req, res) => {
     }
 });
 
-app.post('/send-bulk-message', async (req, res) => {
-    const { chatIds, message, imageUrl, base64Image, filePath } = req.body;
+const parseCSV = (filePath) => {
+    return new Promise((resolve, reject) => {
+        const chatIds = [];
 
-    if (!Array.isArray(chatIds) || chatIds.length === 0 || !message) {
-        return res.status(400).json({ error: 'chatIds (array) and message are required.' });
+        fs.createReadStream(filePath)
+            .pipe(csv({ headers: false }))
+            .on('data', (row) => {
+                const chatId = Object.values(row)[0]?.toString().trim();
+                if (chatId) chatIds.push(chatId);
+            })
+            .on('end', () => {
+                resolve(chatIds);
+            })
+            .on('error', (error) => {
+                reject(error);
+            });
+    });
+};
+
+app.post('/send-bulk-message', upload.single('csvFile'), async (req, res) => {
+    const { message, imageUrl, base64Image, filePath } = req.body;
+    const csvFilePath = req.file?.path;
+
+    if (!csvFilePath || !message) {
+        return res.status(400).json({ error: 'CSV file and message are required.' });
     }
 
-    const results = [];
+    try {
+        const chatIds = await parseCSV(csvFilePath);
+        const results = [];
 
-    for (const chatId of chatIds) {
-        const result = await sendMessageWithClient(chatId, message, { imageUrl, base64Image, filePath });
-        results.push({ chatId, ...result });
+        for (const chatId of chatIds) {
+            const result = await sendMessageWithClient(chatId, message, { imageUrl, base64Image, filePath });
+            results.push({ chatId, ...result });
+        }
+
+        fs.unlinkSync(csvFilePath); // clean up
+        res.json({ results });
+
+    } catch (err) {
+        console.error('Error during CSV processing or messaging:', err);
+        res.status(500).json({ error: 'Internal Server Error', details: err.message });
     }
-
-    res.json({ results });
 });
+
+
+// app.post('/send-bulk-message', async (req, res) => {
+//     const { chatIds, message, imageUrl, base64Image, filePath } = req.body;
+
+//     if (!Array.isArray(chatIds) || chatIds.length === 0 || !message) {
+//         return res.status(400).json({ error: 'chatIds (array) and message are required.' });
+//     }
+
+//     const results = [];
+
+//     for (const chatId of chatIds) {
+//         const result = await sendMessageWithClient(chatId, message, { imageUrl, base64Image, filePath });
+//         results.push({ chatId, ...result });
+//     }
+
+//     res.json({ results });
+// });
 
 async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
     chatId = formatPhoneNumber(chatId);
