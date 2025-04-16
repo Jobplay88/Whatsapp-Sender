@@ -301,9 +301,12 @@ async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
     chatId = formatPhoneNumber(chatId);
     message = striptags(message || '');
     let attempts = 0;
+    const totalClients = clients.length;
+    const startIndex = currentClientIndex;
 
-    while (attempts < clients.length) {
-        const clientObj = clients[currentClientIndex];
+    while (attempts < totalClients) {
+        const clientIndex = (startIndex + attempts) % totalClients;
+        const clientObj = clients[clientIndex];
         const client = clientObj.client;
 
         if (client.info && isClientReady(client)) {
@@ -330,6 +333,7 @@ async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
                     logWithTimestamp(`Message sent from session ${clientObj.name} to ${chatId}`);
                 }
 
+                currentClientIndex = (clientIndex + 1) % totalClients; // update only after successful send
                 return { success: true, from: clientObj.name };
             } catch (err) {
                 errorWithTimestamp(`[${clientObj.name}] Failed to send message: ${err.message}`);
@@ -338,12 +342,60 @@ async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
             warnWithTimestamp(`[${clientObj.name}] Session not connected. Skipping...`);
         }
 
-        currentClientIndex = (currentClientIndex + 1) % clients.length;
         attempts++;
     }
 
     return { success: false, error: 'No connected sessions available to send the message.' };
 }
+
+
+// async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
+//     chatId = formatPhoneNumber(chatId);
+//     message = striptags(message || '');
+//     let attempts = 0;
+
+//     while (attempts < clients.length) {
+//         const clientObj = clients[currentClientIndex];
+//         const client = clientObj.client;
+
+//         if (client.info && isClientReady(client)) {
+//             try {
+//                 let media = null;
+
+//                 if (mediaOptions.imageUrl) {
+//                     media = await MessageMedia.fromUrl(mediaOptions.imageUrl);
+//                 } else if (mediaOptions.base64Image) {
+//                     const mimeType = mediaOptions.base64Image.substring(
+//                         mediaOptions.base64Image.indexOf(':') + 1,
+//                         mediaOptions.base64Image.indexOf(';')
+//                     );
+//                     media = new MessageMedia(mimeType, mediaOptions.base64Image.split(',')[1]);
+//                 } else if (mediaOptions.filePath) {
+//                     media = MessageMedia.fromFilePath(mediaOptions.filePath);
+//                 }
+
+//                 if (media) {
+//                     await client.sendMessage(chatId, media, { caption: message || '' });
+//                     logWithTimestamp(`Image sent from session ${clientObj.name} to ${chatId}`);
+//                 } else {
+//                     await client.sendMessage(chatId, message);
+//                     logWithTimestamp(`Message sent from session ${clientObj.name} to ${chatId}`);
+//                 }
+
+//                 return { success: true, from: clientObj.name };
+//             } catch (err) {
+//                 errorWithTimestamp(`[${clientObj.name}] Failed to send message: ${err.message}`);
+//             }
+//         } else {
+//             warnWithTimestamp(`[${clientObj.name}] Session not connected. Skipping...`);
+//         }
+
+//         currentClientIndex = (currentClientIndex + 1) % clients.length;
+//         attempts++;
+//     }
+
+//     return { success: false, error: 'No connected sessions available to send the message.' };
+// }
 
 
 // Utility function to check if a client is ready
