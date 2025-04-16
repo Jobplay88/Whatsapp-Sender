@@ -14,6 +14,7 @@ const csv = require('csv-parser');
 const app = express();
 const db = require('./db');
 const upload = multer({ dest: 'uploads/' });
+const striptags = require('striptags');
 
 // Enable CORS for API requests (Express)
 app.use(cors({
@@ -296,26 +297,9 @@ app.post('/send-bulk-message', upload.single('csvFile'), async (req, res) => {
     }
 });
 
-
-// app.post('/send-bulk-message', async (req, res) => {
-//     const { chatIds, message, imageUrl, base64Image, filePath } = req.body;
-
-//     if (!Array.isArray(chatIds) || chatIds.length === 0 || !message) {
-//         return res.status(400).json({ error: 'chatIds (array) and message are required.' });
-//     }
-
-//     const results = [];
-
-//     for (const chatId of chatIds) {
-//         const result = await sendMessageWithClient(chatId, message, { imageUrl, base64Image, filePath });
-//         results.push({ chatId, ...result });
-//     }
-
-//     res.json({ results });
-// });
-
 async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
     chatId = formatPhoneNumber(chatId);
+    message = striptags(message || '');
     let attempts = 0;
 
     while (attempts < clients.length) {
