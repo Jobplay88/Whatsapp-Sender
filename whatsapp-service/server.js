@@ -19,8 +19,8 @@ const striptags = require('striptags');
 
 // Read SSL certificate files
 const credentials = {
-    key: fs.readFileSync('/etc/letsencrypt/live/api.jp-wa-bulksender.com/privkey.pem'),
-    cert: fs.readFileSync('/etc/letsencrypt/live/api.jp-wa-bulksender.com/fullchain.pem'),
+    key: fs.readFileSync('/home/ubuntu/ssl/privkey.pem'),
+    cert: fs.readFileSync('/home/ubuntu/ssl/fullchain.pem'),
 };
 
 // Enable CORS for API requests (Express)
