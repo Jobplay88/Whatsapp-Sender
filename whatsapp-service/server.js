@@ -32,29 +32,29 @@ app.use(cors({
 app.use(bodyParser.json());
 
 // Whitelisted IPs
-async function getWhitelistedIPs() {
-    try {
-        const [rows] = await db.query('SELECT ip_address FROM ip_whitelists');
-        return rows.map(row => row.ip_address); // Extract IP addresses from the result
-    } catch (error) {
-        console.error('Error fetching whitelisted IPs:', error);
-        return [];
-    }
-}
+// async function getWhitelistedIPs() {
+//     try {
+//         const [rows] = await db.query('SELECT ip_address FROM ip_whitelists');
+//         return rows.map(row => row.ip_address); // Extract IP addresses from the result
+//     } catch (error) {
+//         console.error('Error fetching whitelisted IPs:', error);
+//         return [];
+//     }
+// }
 
-async function ipWhitelistMiddleware(req, res, next) {
-    const ipWhitelist = await getWhitelistedIPs(); // Dynamically fetch IPs from the database
-    const clientIp = req.ip.replace('::ffff:', ''); // Handle IPv4-mapped IPv6 addresses
+// async function ipWhitelistMiddleware(req, res, next) {
+//     const ipWhitelist = await getWhitelistedIPs(); // Dynamically fetch IPs from the database
+//     const clientIp = req.ip.replace('::ffff:', ''); // Handle IPv4-mapped IPv6 addresses
 
-    if (ipWhitelist.includes(clientIp)) {
-        next(); // Allow access
-    } else {
-        console.warn(`[IP Blocked] Unauthorized access attempt from IP: ${clientIp}`);
-        res.status(403).json({ error: 'Access denied: Your IP is not whitelisted.' });
-    }
-}
+//     if (ipWhitelist.includes(clientIp)) {
+//         next(); // Allow access
+//     } else {
+//         console.warn(`[IP Blocked] Unauthorized access attempt from IP: ${clientIp}`);
+//         res.status(403).json({ error: 'Access denied: Your IP is not whitelisted.' });
+//     }
+// }
 
-app.use(ipWhitelistMiddleware);
+// app.use(ipWhitelistMiddleware);
 
 // Create HTTP server and integrate Socket.IO
 // const server = http.createServer(app);
