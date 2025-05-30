@@ -363,7 +363,7 @@ function htmlToWhatsappText(html) {
     return html
         .replace(/&nbsp;/gi, ' ')              // replace &nbsp; with regular space
         .replace(/<p>/gi, '')                  // remove opening <p>
-        .replace(/<\/p>/gi, '\n')              // replace closing </p> with newline
+        .replace(/<\/p>/gi, '\n\n')            // replace closing </p> with newline
         .replace(/<br\s*\/?>/gi, '\n')         // convert <br> to newline
         .replace(/<b>|<strong>/gi, '*')        // convert bold
         .replace(/<\/b>|<\/strong>/gi, '*')
