@@ -309,7 +309,8 @@ app.post('/send-bulk-message', upload.single('csvFile'), async (req, res) => {
 
 async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
     chatId = formatPhoneNumber(chatId);
-    message = striptags(message || '');
+    // message = striptags(message || '');
+    message = message || '';
     let attempts = 0;
     const totalClients = clients.length;
     const startIndex = currentClientIndex;
@@ -356,6 +357,22 @@ async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
     }
 
     return { success: false, error: 'No connected sessions available to send the message.' };
+}
+
+function htmlToWhatsappText(html) {
+    return html
+        .replace(/&nbsp;/gi, ' ')              // replace &nbsp; with regular space
+        .replace(/<p>/gi, '')                  // remove opening <p>
+        .replace(/<\/p>/gi, '\n')              // replace closing </p> with newline
+        .replace(/<br\s*\/?>/gi, '\n')         // convert <br> to newline
+        .replace(/<b>|<strong>/gi, '*')        // convert bold
+        .replace(/<\/b>|<\/strong>/gi, '*')
+        .replace(/<i>|<em>/gi, '_')            // convert italic
+        .replace(/<\/i>|<\/em>/gi, '_')
+        .replace(/<u>/gi, '')                  // remove underline (unsupported)
+        .replace(/<\/u>/gi, '')
+        .replace(/<\/?[^>]+(>|$)/g, '')        // remove all other tags
+        .trim();                               // clean up
 }
 
 
