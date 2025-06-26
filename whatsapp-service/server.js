@@ -438,7 +438,8 @@ function formatPhoneNumber(phoneNumber) {
 
 // Handle all uncaught exceptions globally
 process.on('uncaughtException', (err) => {
-    errorWithTimestamp("Uncaught Exception:", err.message);
+    // errorWithTimestamp("Uncaught Exception:", err.message);
+    console.error(`[${new Date().toISOString()}] Uncaught Exception:`, err);
     process.exit(1);
 });
 

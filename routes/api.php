@@ -42,4 +42,6 @@ Route::middleware(['auth:api'])->group(function () {
         Route::post('/create', [WhiteListController::class, 'handleAddNewWhiteList']);
         Route::post('/delete', [WhiteListController::class, 'handleDeleteWhiteList']);
     });
+
+    Route::post('/logout', [AuthController::class, 'logout']);
 });
