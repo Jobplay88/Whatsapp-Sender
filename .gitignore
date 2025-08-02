@@ -22,6 +22,4 @@ yarn-error.log
 /whatsapp-service/.wwebjs_auth
 /whatsapp-service/.wwebjs_cache
 /whatsapp-service/package-lock.json
-/whatsapp-service/logs
 /whatsapp-service/uploads
-/whatsapp-service/package.json
