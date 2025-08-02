@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\WhiteListController;
 use App\Http\Controllers\PhoneSessionController;
 use Laravel\Passport\Http\Controllers\AccessTokenController;
@@ -31,6 +32,10 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware(['auth:api'])->group(function () {
+    Route::group(['prefix' => 'users'], function () {
+        Route::get('/list', [UserController::class, 'showUserList']);
+    });
+
     Route::group(['prefix' => 'phone-sessions'], function () {
         Route::get('/list', [PhoneSessionController::class, 'showPhoneSessionList']);
         Route::post('/create', [PhoneSessionController::class, 'handleAddNewPhoneSession']);
