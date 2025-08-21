@@ -11,6 +11,7 @@ const https = require('https');
 const { Server } = require('socket.io');
 const multer = require('multer');
 const csv = require('csv-parser');
+const sharp = require("sharp");
 
 const app = express();
 const db = require('./db');
@@ -29,7 +30,8 @@ app.use(cors({
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 // Whitelisted IPs
 // async function getWhitelistedIPs() {
@@ -324,16 +326,19 @@ async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
             try {
                 let media = null;
 
-                if (mediaOptions.imageUrl) {
-                    media = await MessageMedia.fromUrl(mediaOptions.imageUrl);
-                } else if (mediaOptions.base64Image) {
-                    const mimeType = mediaOptions.base64Image.substring(
-                        mediaOptions.base64Image.indexOf(':') + 1,
-                        mediaOptions.base64Image.indexOf(';')
-                    );
-                    media = new MessageMedia(mimeType, mediaOptions.base64Image.split(',')[1]);
-                } else if (mediaOptions.filePath) {
-                    media = MessageMedia.fromFilePath(mediaOptions.filePath);
+                // if (mediaOptions.imageUrl) {
+                //     media = await MessageMedia.fromUrl(mediaOptions.imageUrl);
+                // } else if (mediaOptions.base64Image) {
+                //     const mimeType = mediaOptions.base64Image.substring(
+                //         mediaOptions.base64Image.indexOf(':') + 1,
+                //         mediaOptions.base64Image.indexOf(';')
+                //     );
+                //     media = new MessageMedia(mimeType, mediaOptions.base64Image.split(',')[1]);
+                // } else if (mediaOptions.filePath) {
+                //     media = MessageMedia.fromFilePath(mediaOptions.filePath);
+                // }
+                if (mediaOptions) {
+                    media = await prepareMedia(mediaOptions);
                 }
 
                 if (media) {
@@ -455,3 +460,67 @@ const PORT = 3000;
 server.listen(PORT, () => {
     logWithTimestamp(`Server is running on http://localhost:${PORT}`);
 });
+
+// Max WhatsApp Web file size = 16 MB
+const MAX_FILE_SIZE = 16 * 1024 * 1024;
+
+// Helper: check base64 validity
+function isValidBase64(str) {
+    try {
+        Buffer.from(str, "base64");
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// Prepare media (url, base64, filePath)
+async function prepareMedia(mediaOptions) {
+    let buffer;
+    let mimeType = "image/jpeg"; // default after compression
+
+    if (mediaOptions.imageUrl) {
+        // Download from URL
+        const response = await axios.get(mediaOptions.imageUrl, { responseType: "arraybuffer" });
+        buffer = Buffer.from(response.data);
+
+    } else if (mediaOptions.base64Image) {
+        // Strip "data:image/png;base64," if present
+        // const base64Data = mediaOptions.base64Image.includes(",")
+        //     ? mediaOptions.base64Image.split(",")[1]
+        //     : mediaOptions.base64Image;
+        const base64Data = mediaOptions.base64Image.replace(/^data:.*;base64,/, "");
+
+        if (!isValidBase64(base64Data)) {
+            throw new Error("Invalid or truncated base64 image");
+        }
+
+        buffer = Buffer.from(base64Data, "base64");
+
+    } else if (mediaOptions.filePath) {
+        buffer = fs.readFileSync(mediaOptions.filePath);
+
+    } else {
+        throw new Error("No media provided");
+    }
+
+    // ✅ Process with sharp (resize + compress)
+    try {
+        buffer = await sharp(buffer)
+            .resize({ width: 800 })   // keep aspect ratio, max width 800px
+            .jpeg({ quality: 70 })    // convert to JPEG with compression
+            .toBuffer();
+    } catch (err) {
+        console.error("Sharp failed:", err.message);
+        throw new Error("Failed to process image (corrupted or invalid)");
+    }
+
+    // ✅ File size check
+    if (buffer.length > MAX_FILE_SIZE) {
+        throw new Error(
+            `File too large for WhatsApp (max 16MB). Got ${(buffer.length / 1024 / 1024).toFixed(2)} MB`
+        );
+    }
+
+    return new MessageMedia(mimeType, buffer.toString("base64"));
+}

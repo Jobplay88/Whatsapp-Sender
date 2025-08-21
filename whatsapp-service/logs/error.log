@@ -1,0 +1,30 @@
+
+[2025-08-21T06:13:33.669Z] Unhandled Rejection at:
+
+[2025-08-21T06:15:03.786Z] Unhandled Rejection at:
+
+[2025-08-21T06:37:36.458Z] [Sunny] Failed to send message: Evaluation failed: DOMException: Failed to execute 'atob' on 'Window': The string to be decoded is not correctly encoded.
+    at window.WWebJS.mediaInfoToFile (pptr://__puppeteer_evaluation_script__:659:35)
+    at window.WWebJS.processMediaData (pptr://__puppeteer_evaluation_script__:396:36)
+    at window.WWebJS.sendMessage (pptr://__puppeteer_evaluation_script__:31:39)
+    at pptr://__puppeteer_evaluation_script__:10:45
+
+[2025-08-21T06:47:32.150Z] [Yang] Failed to send message: pngload_buffer: end of stream
+
+[2025-08-21T06:49:34.991Z] [Yang] Failed to send message: pngload_buffer: end of stream
+
+[2025-08-21T06:51:55.720Z] [Yang] Failed to send message: Failed to process image (corrupted or invalid)
+
+[2025-08-21T06:53:19.587Z] [Yang] Failed to send message: Failed to process image (corrupted or invalid)
+
+[2025-08-21T06:55:47.256Z] [Yang] Failed to send message: Failed to process image (corrupted or invalid)
+
+[2025-08-21T06:56:01.496Z] [Yang] Failed to send message: Failed to process image (corrupted or invalid)
+
+[2025-08-21T06:59:48.072Z] Unhandled Rejection at:
+
+[2025-08-21T07:00:13.030Z] [Yang] Failed to send message: Failed to process image (corrupted or invalid)
+
+[2025-08-21T07:00:13.032Z] Unhandled Rejection at:
+
+[2025-08-21T07:10:46.391Z] Unhandled Rejection at:
