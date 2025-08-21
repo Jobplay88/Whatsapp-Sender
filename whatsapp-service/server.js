@@ -324,6 +324,7 @@ async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
 
         if (client.info && isClientReady(client)) {
             try {
+                const hasMedia = mediaOptions && (mediaOptions.imageUrl || mediaOptions.base64Image || mediaOptions.filePath);
                 let media = null;
 
                 // if (mediaOptions.imageUrl) {
@@ -337,7 +338,8 @@ async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
                 // } else if (mediaOptions.filePath) {
                 //     media = MessageMedia.fromFilePath(mediaOptions.filePath);
                 // }
-                if (mediaOptions) {
+
+                if (hasMedia) {
                     media = await prepareMedia(mediaOptions);
                 }
 
