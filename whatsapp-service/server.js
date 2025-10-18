@@ -20,10 +20,10 @@ const upload = multer({ dest: 'uploads/' });
 const striptags = require('striptags');
 
 // Read SSL certificate files
-// const credentials = {
-//     key: fs.readFileSync('/home/ubuntu/ssl/privkey.pem'),
-//     cert: fs.readFileSync('/home/ubuntu/ssl/fullchain.pem'),
-// };
+const credentials = {
+    key: fs.readFileSync('/home/ubuntu/ssl/privkey.pem'),
+    cert: fs.readFileSync('/home/ubuntu/ssl/fullchain.pem'),
+};
 
 // Enable CORS for API requests (Express)
 app.use(cors({
@@ -60,8 +60,8 @@ app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 // app.use(ipWhitelistMiddleware);
 
 // Create HTTP server and integrate Socket.IO
-const server = http.createServer(app);
-// const server = https.createServer(credentials, app);
+// const server = http.createServer(app);
+const server = https.createServer(credentials, app);
 
 // Enable CORS for WebSocket (Socket.IO)
 const io = new Server(server, {
