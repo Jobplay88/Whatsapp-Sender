@@ -12,6 +12,7 @@ const { Server } = require('socket.io');
 const multer = require('multer');
 const csv = require('csv-parser');
 const sharp = require("sharp");
+const axios = require('axios');
 
 const app = express();
 const db = require('./db');
@@ -19,10 +20,10 @@ const upload = multer({ dest: 'uploads/' });
 const striptags = require('striptags');
 
 // Read SSL certificate files
-const credentials = {
-    key: fs.readFileSync('/home/ubuntu/ssl/privkey.pem'),
-    cert: fs.readFileSync('/home/ubuntu/ssl/fullchain.pem'),
-};
+// const credentials = {
+//     key: fs.readFileSync('/home/ubuntu/ssl/privkey.pem'),
+//     cert: fs.readFileSync('/home/ubuntu/ssl/fullchain.pem'),
+// };
 
 // Enable CORS for API requests (Express)
 app.use(cors({
@@ -59,8 +60,8 @@ app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 // app.use(ipWhitelistMiddleware);
 
 // Create HTTP server and integrate Socket.IO
-// const server = http.createServer(app);
-const server = https.createServer(credentials, app);
+const server = http.createServer(app);
+// const server = https.createServer(credentials, app);
 
 // Enable CORS for WebSocket (Socket.IO)
 const io = new Server(server, {
@@ -229,7 +230,7 @@ function initializeSession(session) {
         errorWithTimestamp(`[${session.name}] Error: ${err.message}`);
     });
 
-    clients.push({ name: session.name, client });
+    clients.push({ id: session.id, name: session.name, client });
 
     client.initialize().catch((err) => {
         errorWithTimestamp(`[${session.name}] Failed to initialize client: ${err.message}`);
@@ -311,7 +312,6 @@ app.post('/send-bulk-message', upload.single('csvFile'), async (req, res) => {
 
 async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
     chatId = formatPhoneNumber(chatId);
-    // message = striptags(message || '');
     message = htmlToWhatsappText(message || '');
     let attempts = 0;
     const totalClients = clients.length;
@@ -327,18 +327,6 @@ async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
                 const hasMedia = mediaOptions && (mediaOptions.imageUrl || mediaOptions.base64Image || mediaOptions.filePath);
                 let media = null;
 
-                // if (mediaOptions.imageUrl) {
-                //     media = await MessageMedia.fromUrl(mediaOptions.imageUrl);
-                // } else if (mediaOptions.base64Image) {
-                //     const mimeType = mediaOptions.base64Image.substring(
-                //         mediaOptions.base64Image.indexOf(':') + 1,
-                //         mediaOptions.base64Image.indexOf(';')
-                //     );
-                //     media = new MessageMedia(mimeType, mediaOptions.base64Image.split(',')[1]);
-                // } else if (mediaOptions.filePath) {
-                //     media = MessageMedia.fromFilePath(mediaOptions.filePath);
-                // }
-
                 if (hasMedia) {
                     media = await prepareMedia(mediaOptions);
                 }
@@ -351,16 +339,53 @@ async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
                     logWithTimestamp(`Message sent from session ${clientObj.name} to ${chatId}`);
                 }
 
-                currentClientIndex = (clientIndex + 1) % totalClients; // update only after successful send
+                try {
+                    // ✅ Insert success log into DB
+                    await db.execute(
+                        `INSERT INTO whatsapp_logs 
+                        (whatsapp_service_id, chat_id, status, message)
+                        VALUES (?, ?, ?, ?)`,
+                        [clientObj.id, chatId, 'success', message]
+                    );
+                } catch (logErr) {
+                    errorWithTimestamp(`DB insert failed: ${logErr.message}`);
+                }
+
+                currentClientIndex = (clientIndex + 1) % totalClients;
                 return { success: true, from: clientObj.name };
             } catch (err) {
                 errorWithTimestamp(`[${clientObj.name}] Failed to send message: ${err.message}`);
+
+                try {
+                    // ✅ Insert error log into DB
+                    await db.execute(
+                        `INSERT INTO whatsapp_logs 
+                        (whatsapp_service_id, chat_id, status, message, error_message)
+                        VALUES (?, ?, ?, ?, ?)`,
+                        [clientObj.id, chatId, 'error', message, err.message]
+                    );
+
+                } catch (logErr) {
+                    errorWithTimestamp(`DB insert failed: ${logErr.message}`);
+                }
             }
         } else {
             warnWithTimestamp(`[${clientObj.name}] Session not connected. Skipping...`);
         }
 
         attempts++;
+    }
+
+    try {
+        // ✅ Log final failure (no sessions available)
+        await db.execute(
+            `INSERT INTO whatsapp_logs 
+            (whatsapp_service_id, chat_id, status, message, error_message)
+            VALUES (?, ?, ?, ?, ?)`,
+            [clientObj.id || 0, chatId, 'fail', message, 'Session not connected']
+        );
+    } catch (logErr) {
+        errorWithTimestamp(`DB insert failed: ${logErr.message}`);
     }
 
     return { success: false, error: 'No connected sessions available to send the message.' };
@@ -381,56 +406,6 @@ function htmlToWhatsappText(html) {
         .replace(/<\/?[^>]+(>|$)/g, '')        // remove all other tags
         .trim();                               // clean up
 }
-
-
-// async function sendMessageWithClient(chatId, message, mediaOptions = {}) {
-//     chatId = formatPhoneNumber(chatId);
-//     message = striptags(message || '');
-//     let attempts = 0;
-
-//     while (attempts < clients.length) {
-//         const clientObj = clients[currentClientIndex];
-//         const client = clientObj.client;
-
-//         if (client.info && isClientReady(client)) {
-//             try {
-//                 let media = null;
-
-//                 if (mediaOptions.imageUrl) {
-//                     media = await MessageMedia.fromUrl(mediaOptions.imageUrl);
-//                 } else if (mediaOptions.base64Image) {
-//                     const mimeType = mediaOptions.base64Image.substring(
-//                         mediaOptions.base64Image.indexOf(':') + 1,
-//                         mediaOptions.base64Image.indexOf(';')
-//                     );
-//                     media = new MessageMedia(mimeType, mediaOptions.base64Image.split(',')[1]);
-//                 } else if (mediaOptions.filePath) {
-//                     media = MessageMedia.fromFilePath(mediaOptions.filePath);
-//                 }
-
-//                 if (media) {
-//                     await client.sendMessage(chatId, media, { caption: message || '' });
-//                     logWithTimestamp(`Image sent from session ${clientObj.name} to ${chatId}`);
-//                 } else {
-//                     await client.sendMessage(chatId, message);
-//                     logWithTimestamp(`Message sent from session ${clientObj.name} to ${chatId}`);
-//                 }
-
-//                 return { success: true, from: clientObj.name };
-//             } catch (err) {
-//                 errorWithTimestamp(`[${clientObj.name}] Failed to send message: ${err.message}`);
-//             }
-//         } else {
-//             warnWithTimestamp(`[${clientObj.name}] Session not connected. Skipping...`);
-//         }
-
-//         currentClientIndex = (currentClientIndex + 1) % clients.length;
-//         attempts++;
-//     }
-
-//     return { success: false, error: 'No connected sessions available to send the message.' };
-// }
-
 
 // Utility function to check if a client is ready
 function isClientReady(client) {
